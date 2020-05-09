@@ -1,16 +1,17 @@
 const express = require("express");
-const morgan = require('morgan')
-const cors = require('cors')
+const morgan = require("morgan");
+const cors = require("cors");
 const app = express();
 
-
 app.use(express.json());
-app.use(cors())
-app.use(express.static('build'))
-morgan.token('body', (req, res) => {
-  return JSON.stringify(req.body)
-})
-app.use(morgan(':method :url :status :req[content-length] - :response-time ms :body'))
+app.use(cors());
+app.use(express.static("build"));
+morgan.token("body", (req, res) => {
+  return JSON.stringify(req.body);
+});
+app.use(
+  morgan(":method :url :status :req[content-length] - :response-time ms :body")
+);
 
 let persons = [
   {
@@ -58,9 +59,12 @@ app.get("/api/persons/:id", (req, res) => {
 });
 app.delete("/api/persons/:id", (req, res) => {
   const id = Number(req.params.id);
-  // console.log(persons)
-  persons = persons.filter((person) => person.id !== id);
-  res.status(204).end();
+  if (persons.find((person) => person.id === id)) {
+    persons = persons.filter((person) => person.id !== id);
+    res.status(204).end();
+  } else {
+    res.status(404).end();
+  }
 });
 const generateId = () => {
   return Math.round(Math.random() * 1000000000);
@@ -89,7 +93,7 @@ app.post("/api/persons", (req, res) => {
       name: body.name,
       number: body.number,
       id: generateId(),
-    }
+    };
     persons = [...persons, person];
     res.json(person);
   }
