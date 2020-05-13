@@ -15,14 +15,6 @@ app.use(
   morgan(":method :url :status :req[content-length] - :response-time ms :body")
 );
 
-const errorHandler = (error, req, res, next) => {
-  // console.log(error.message);
-  if (error.name === "CastError" && error.kind === "ObjectId") {
-    return res.status(400).send({ error: "malformatted id" });
-  }
-  next(error);
-};
-app.use(errorHandler);
 app.get("/", (req, res) => {
   res.send("<h1>Phonebook backend</h1>");
 });
@@ -35,9 +27,12 @@ app.get("/api/persons", (req, res, next) => {
 });
 app.get("/info", (req, res) => {
   const date = new Date();
-  res.send(
-    `<p>Phonebook has info for ${persons.length} people </p> <p>${date}</p>`
-  );
+  Person.find({}).then((persons) => {
+    res.send(`
+      <div>Phonebook has info for ${persons.length} people</div>
+      <div>${date.toString()}</div>
+    `);
+  });
 });
 app.get("/api/persons/:id", (req, res, next) => {
   Person.findById(req.params.id)
@@ -62,19 +57,22 @@ app.delete("/api/persons/:id", (req, res, next) => {
       next(error);
     });
 });
-
+app.put("/api/persons/:id", (req, res, next) => {
+  const body = req.body;
+  const person = {
+    name: body.name,
+    number: body.number,
+  };
+  console.log(req.params.id);
+  Person.findByIdAndUpdate(req.params.id, person, { new: true })
+    .then((updatedPerson) => {
+      res.json(updatedPerson.toJSON());
+    })
+    .catch((err) => next(err));
+});
 app.post("/api/persons", (req, res, next) => {
   const body = req.body;
-  if (
-    body.name === "" ||
-    body.name == undefined ||
-    body.number === "" ||
-    body.number === undefined
-  ) {
-    res.status(400).json({
-      error: "name or number missing",
-    });
-  }
+
   const person = new Person({
     name: body.name,
     number: body.number,
@@ -88,6 +86,16 @@ app.post("/api/persons", (req, res, next) => {
     .catch((error) => next(error));
 });
 
+const errorHandler = (error, req, res, next) => {
+
+  if (error.name === "CastError" && error.kind === "ObjectId") {
+    return res.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    res.status(400).send({ error: error.message });
+  }
+  next(error);
+};
+app.use(errorHandler);
 const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
